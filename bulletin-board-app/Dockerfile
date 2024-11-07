@@ -1,5 +1,5 @@
 # Usa una versión más reciente y ligera de Node
-FROM node:18-alpine
+FROM node:20-alpine
 
 WORKDIR /usr/src/app
 
