@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  bb-db:
+    image: ${dockerId:-dockersamples}/bulletin-board-db:v5
+    build:
+      context: ./bulletin-board-db
+    networks:
+      - bb-net
+    restart: always
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "DockerCon!!!"
+    volumes:
+      - bb-db-data:/var/opt/mssql  # Persistencia de datos
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U SA"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  bb-app:
+    image: ${dockerId:-dockersamples}/bulletin-board-app:v5
+    build:
+      context: ./bulletin-board-app
+    depends_on:
+      - bb-db
+    restart: always
+    networks:
+      - bb-net
+    environment:
+      NODE_ENV: production
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  bb-proxy:
+    image: ${dockerId:-dockersamples}/bulletin-board-proxy:v5
+    build:
+      context: ./bulletin-board-proxy
+    ports:
+      - "80:80"
+    depends_on:
+      - bb-app
+    networks:
+      - bb-net
+    restart: always
+
+  bb-metrics:
+    image: ${dockerId:-dockersamples}/bulletin-board-metrics:v5
+    build:
+      context: ./bulletin-board-metrics
+    depends_on:
+      - bb-app
+    networks:
+      - bb-net
+    restart: always
+
+  bb-dashboard:
+    image: ${dockerId:-dockersamples}/bulletin-board-dashboard:v5
+    build:
+      context: ./bulletin-board-dashboard
+    ports:
+      - "3000:3000"
+    depends_on:
+      - bb-metrics
+    networks:
+      - bb-net
+    restart: always
+
+networks:
+  bb-net:
+
+volumes:
+  bb-db-data:
